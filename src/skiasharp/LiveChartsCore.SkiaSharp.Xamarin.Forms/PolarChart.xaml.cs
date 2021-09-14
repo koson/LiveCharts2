@@ -75,8 +75,14 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
             _angleObserver = new CollectionDeepObserver<IPolarAxis>(OnDeepCollectionChanged, OnDeepCollectionPropertyChanged, true);
             _radiusObserver = new CollectionDeepObserver<IPolarAxis>(OnDeepCollectionChanged, OnDeepCollectionPropertyChanged, true);
 
-            AngleAxes = new List<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() };
-            RadiusAxes = new List<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() };
+            AngleAxes = new List<IPolarAxis>()
+            {
+                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+            };
+            RadiusAxes = new List<IPolarAxis>()
+            {
+                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+            };
             Series = new ObservableCollection<ISeries>();
 
             canvas.SkCanvasView.EnableTouchEvents = true;
@@ -105,7 +111,35 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 });
 
         /// <summary>
-        /// The series property
+        /// The fit to bounds property.
+        /// </summary>
+        public static readonly BindableProperty FitToBoundsProperty =
+           BindableProperty.Create(nameof(FitToBounds), typeof(bool), typeof(PolarChart), false,
+               propertyChanged: OnBindablePropertyChanged);
+
+        /// <summary>
+        /// The total angle property.
+        /// </summary>
+        public static readonly BindableProperty TotalAngleProperty =
+           BindableProperty.Create(nameof(TotalAngle), typeof(double), typeof(PolarChart), 360d,
+               propertyChanged: OnBindablePropertyChanged);
+
+        /// <summary>
+        /// The Inner radius property.
+        /// </summary>
+        public static readonly BindableProperty InnerRadiusProperty =
+           BindableProperty.Create(nameof(InnerRadius), typeof(double), typeof(PolarChart), 0d,
+               propertyChanged: OnBindablePropertyChanged);
+
+        /// <summary>
+        /// The Initial rotation property.
+        /// </summary>
+        public static readonly BindableProperty InitialRotationProperty =
+           BindableProperty.Create(nameof(InitialRotation), typeof(double), typeof(PolarChart), 0d,
+               propertyChanged: OnBindablePropertyChanged);
+
+        /// <summary>
+        /// The series property.
         /// </summary>
         public static readonly BindableProperty SeriesProperty =
             BindableProperty.Create(
@@ -121,7 +155,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 });
 
         /// <summary>
-        /// The x axes property
+        /// The x axes property.
         /// </summary>
         public static readonly BindableProperty AngleAxesProperty =
             BindableProperty.Create(
@@ -137,7 +171,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 });
 
         /// <summary>
-        /// The y axes property
+        /// The y axes property.
         /// </summary>
         public static readonly BindableProperty RadiusAxesProperty =
             BindableProperty.Create(
@@ -153,14 +187,14 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 });
 
         /// <summary>
-        /// The animations speed property
+        /// The animations speed property.
         /// </summary>
         public static readonly BindableProperty AnimationsSpeedProperty =
            BindableProperty.Create(
                nameof(AnimationsSpeed), typeof(TimeSpan), typeof(PolarChart), LiveCharts.CurrentSettings.DefaultAnimationsSpeed);
 
         /// <summary>
-        /// The easing function property
+        /// The easing function property.
         /// </summary>
         public static readonly BindableProperty EasingFunctionProperty =
             BindableProperty.Create(
@@ -168,7 +202,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 LiveCharts.CurrentSettings.DefaultEasingFunction);
 
         /// <summary>
-        /// The legend position property
+        /// The legend position property.
         /// </summary>
         public static readonly BindableProperty LegendPositionProperty =
             BindableProperty.Create(
@@ -176,7 +210,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 LiveCharts.CurrentSettings.DefaultLegendPosition, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend orientation property
+        /// The legend orientation property.
         /// </summary>
         public static readonly BindableProperty LegendOrientationProperty =
             BindableProperty.Create(
@@ -184,28 +218,28 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 LiveCharts.CurrentSettings.DefaultLegendOrientation, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend template property
+        /// The legend template property.
         /// </summary>
         public static readonly BindableProperty LegendTemplateProperty =
             BindableProperty.Create(
                 nameof(LegendTemplate), typeof(DataTemplate), typeof(PolarChart), null, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend font family property
+        /// The legend font family property.
         /// </summary>
         public static readonly BindableProperty LegendFontFamilyProperty =
             BindableProperty.Create(
                 nameof(LegendFontFamily), typeof(string), typeof(PolarChart), null, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend font size property
+        /// The legend font size property.
         /// </summary>
         public static readonly BindableProperty LegendFontSizeProperty =
             BindableProperty.Create(
                 nameof(LegendFontSize), typeof(double), typeof(PolarChart), 13d, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend text color property
+        /// The legend text color property.
         /// </summary>
         public static readonly BindableProperty LegendTextBrushProperty =
             BindableProperty.Create(
@@ -213,7 +247,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 new c(35 / 255d, 35 / 255d, 35 / 255d), propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend background property
+        /// The legend background property.
         /// </summary>
         public static readonly BindableProperty LegendBackgroundProperty =
             BindableProperty.Create(
@@ -221,7 +255,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 new c(255 / 255d, 255 / 255d, 255 / 255d), propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The legend font attributes property
+        /// The legend font attributes property.
         /// </summary>
         public static readonly BindableProperty LegendFontAttributesProperty =
             BindableProperty.Create(
@@ -229,7 +263,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 FontAttributes.None, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The tool tip position property
+        /// The tool tip position property.
         /// </summary>
         public static readonly BindableProperty TooltipPositionProperty =
            BindableProperty.Create(
@@ -237,7 +271,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                LiveCharts.CurrentSettings.DefaultTooltipPosition, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The too ltip finding strategy property
+        /// The too ltip finding strategy property.
         /// </summary>
         public static readonly BindableProperty TooltipFindingStrategyProperty =
             BindableProperty.Create(
@@ -245,28 +279,28 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 LiveCharts.CurrentSettings.DefaultTooltipFindingStrategy);
 
         /// <summary>
-        /// The tool tip template property
+        /// The tool tip template property.
         /// </summary>
         public static readonly BindableProperty TooltipTemplateProperty =
             BindableProperty.Create(
                 nameof(TooltipTemplate), typeof(DataTemplate), typeof(PolarChart), null, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The tool tip font family property
+        /// The tool tip font family property.
         /// </summary>
         public static readonly BindableProperty TooltipFontFamilyProperty =
             BindableProperty.Create(
                 nameof(TooltipFontFamily), typeof(string), typeof(PolarChart), null, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The tool tip font size property
+        /// The tool tip font size property.
         /// </summary>
         public static readonly BindableProperty TooltipFontSizeProperty =
             BindableProperty.Create(
                 nameof(TooltipFontSize), typeof(double), typeof(PolarChart), 13d, propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The tool tip text color property
+        /// The tool tip text color property.
         /// </summary>
         public static readonly BindableProperty TooltipTextBrushProperty =
             BindableProperty.Create(
@@ -274,7 +308,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 new c(35 / 255d, 35 / 255d, 35 / 255d), propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The tool tip background property
+        /// The tool tip background property.
         /// </summary>
         public static readonly BindableProperty TooltipBackgroundProperty =
             BindableProperty.Create(
@@ -282,7 +316,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
                 new c(250 / 255d, 250 / 255d, 250 / 255d), propertyChanged: OnBindablePropertyChanged);
 
         /// <summary>
-        /// The tool tip font attributes property
+        /// The tool tip font attributes property.
         /// </summary>
         public static readonly BindableProperty TooltipFontAttributesProperty =
             BindableProperty.Create(
@@ -351,6 +385,34 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
         {
             get => null;
             set => throw new NotImplementedException();
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.FitToBounds" />
+        public bool FitToBounds
+        {
+            get => (bool)GetValue(FitToBoundsProperty);
+            set => SetValue(FitToBoundsProperty, value);
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.TotalAngle" />
+        public double TotalAngle
+        {
+            get => (double)GetValue(TotalAngleProperty);
+            set => SetValue(TotalAngleProperty, value);
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.InnerRadius" />
+        public double InnerRadius
+        {
+            get => (double)GetValue(InnerRadiusProperty);
+            set => SetValue(InnerRadiusProperty, value);
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.InitialRotation" />
+        public double InitialRotation
+        {
+            get => (double)GetValue(InitialRotationProperty);
+            set => SetValue(InitialRotationProperty, value);
         }
 
         /// <inheritdoc cref="IPolarChartView{TDrawingContext}.Series" />
@@ -600,6 +662,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
         {
             if (tooltip is null || _core is null) return;
 
+            core.ClearTooltipData();
             ((IChartTooltip<SkiaSharpDrawingContext>)tooltip).Hide();
         }
 

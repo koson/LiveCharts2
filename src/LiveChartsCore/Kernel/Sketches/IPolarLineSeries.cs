@@ -21,43 +21,23 @@
 // SOFTWARE.
 
 using LiveChartsCore.Drawing;
-using LiveChartsCore.Measure;
 
 namespace LiveChartsCore.Kernel.Sketches
 {
     /// <summary>
-    /// Defines a polar series.
+    /// Defines a polar line series plot.
     /// </summary>
     /// <typeparam name="TDrawingContext">The type of the drawing context.</typeparam>
     /// <seealso cref="IChartSeries{TDrawingContext}" />
-    public interface IPolarSeries<TDrawingContext> : IChartSeries<TDrawingContext>
+    public interface IPolarLineSeries<TDrawingContext> : ILineSeries<TDrawingContext>
         where TDrawingContext : DrawingContext
     {
         /// <summary>
-        /// Gets or sets the axis index where the series is scaled in the angle plane, the index must exist 
-        /// in the <see cref="IPolarSeries{TDrawingContext}.ScalesAngleAt"/> collection.
+        /// Gets or sets a value indicating whether this series path is closed, default is true.
         /// </summary>
         /// <value>
-        /// The index of the axis.
+        /// The value.
         /// </value>
-        int ScalesAngleAt { get; set; }
-
-        /// <summary>
-        /// Gets or sets the axis index where the series is scaled in the radius plane, the index must exist 
-        /// in the <see cref="IPolarSeries{TDrawingContext}.ScalesRadiusAt"/> collection.
-        /// </summary>
-        /// <value>
-        /// The index of the axis.
-        /// </value>
-        int ScalesRadiusAt { get; set; }
-
-        /// <summary>
-        /// Gets the series bounds.
-        /// </summary>
-        /// <param name="chart">The chart.</param>
-        /// <param name="angleAxis">The angle axis.</param>
-        /// <param name="radiusAxis">The radius axis.</param>
-        /// <returns>the series bounds</returns>
-        SeriesBounds GetBounds(PolarChart<TDrawingContext> chart, IPolarAxis angleAxis, IPolarAxis radiusAxis);
+        bool IsClosed { get; set; }
     }
 }

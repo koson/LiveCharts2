@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Linq;
 using LiveChartsCore.Kernel.Drawing;
 using LiveChartsCore.Kernel.Sketches;
-using LiveChartsCore.Kernel.Data;
 
 namespace LiveChartsCore
 {
@@ -36,7 +35,7 @@ namespace LiveChartsCore
     /// Defines the data to plot as a line.
     /// </summary>
     public class PolarLineSeries<TModel, TVisual, TLabel, TDrawingContext, TPathGeometry, TLineSegment, TBezierSegment, TMoveToCommand, TPathArgs>
-        : ChartSeries<TModel, LineBezierVisualPoint<TDrawingContext, TVisual, TBezierSegment, TPathArgs>, TLabel, TDrawingContext>, ILineSeries<TDrawingContext>, IPolarSeries<TDrawingContext>
+        : ChartSeries<TModel, LineBezierVisualPoint<TDrawingContext, TVisual, TBezierSegment, TPathArgs>, TLabel, TDrawingContext>, IPolarLineSeries<TDrawingContext>, IPolarSeries<TDrawingContext>
             where TPathGeometry : IPathGeometry<TDrawingContext, TPathArgs>, new()
             where TLineSegment : ILinePathSegment<TPathArgs>, new()
             where TBezierSegment : IBezierSegment<TPathArgs>, new()
@@ -56,9 +55,10 @@ namespace LiveChartsCore
         private IPaint<TDrawingContext>? _fill = null;
         private int _scalesAngleAt;
         private int _scalesRadiusAt;
+        private bool _isClosed = true;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LineSeries{TModel, TVisual, TLabel, TDrawingContext, TPathGeometry, TLineSegment, TBezierSegment, TMoveToCommand, TPathArgs}"/> class.
+        /// Initializes a new instance of the <see cref="PolarLineSeries{TModel, TVisual, TLabel, TDrawingContext, TPathGeometry, TLineSegment, TBezierSegment, TMoveToCommand, TPathArgs}"/> class.
         /// </summary>
         /// <param name="isStacked">if set to <c>true</c> [is stacked].</param>
         public PolarLineSeries(bool isStacked = false)
@@ -66,8 +66,7 @@ namespace LiveChartsCore
                   SeriesProperties.Line | SeriesProperties.PrimaryAxisVerticalOrientation |
                   (isStacked ? SeriesProperties.Stacked : 0) | SeriesProperties.Sketch | SeriesProperties.PrefersXStrategyTooltips)
         {
-            DataPadding = new LvcPoint(0.5f, 1f);
-            HoverState = LiveCharts.LineSeriesHoverKey;
+            DataPadding = new LvcPoint(0f, 1.5f);
         }
 
         /// <summary>
@@ -134,6 +133,9 @@ namespace LiveChartsCore
             set => SetPaintProperty(ref _geometryStroke, value, true);
         }
 
+        /// <inheritdoc cref="IPolarLineSeries{TDrawingContext}.IsClosed"/>
+        public bool IsClosed { get => _isClosed; set { _isClosed = value; OnPropertyChanged(); } }
+
         /// <inheritdoc cref="ChartElement{TDrawingContext}.Measure(Chart{TDrawingContext})"/>
         public override void Measure(Chart<TDrawingContext> chart)
         {
@@ -144,7 +146,9 @@ namespace LiveChartsCore
             var drawLocation = polarChart.DrawMarginLocation;
             var drawMarginSize = polarChart.DrawMarginSize;
 
-            var scaler = new PolarScaler(drawLocation, drawMarginSize, angleAxis, radiusAxis, 0);
+            var scaler = new PolarScaler(
+                drawLocation, drawMarginSize, angleAxis, radiusAxis,
+                polarChart.InnerRadius, polarChart.InitialRotation, polarChart.TotalAnge);
 
             var gs = _geometrySize;
             var hgs = gs / 2f;
@@ -231,6 +235,7 @@ namespace LiveChartsCore
                     polarChart.Canvas.AddDrawableTask(Stroke);
                     Stroke.ZIndex = actualZIndex + 0.2;
                     Stroke.SetClipRectangle(polarChart.Canvas, new LvcRectangle(drawLocation, drawMarginSize));
+                    strokePathHelper.Path.IsClosed = IsClosed;
                 }
 
                 foreach (var data in GetSpline(segment, scaler, stacker))
@@ -254,10 +259,6 @@ namespace LiveChartsCore
 
                         visual = v;
 
-                        var pg = scaler.CenterY;
-                        var xg = x - hgs;
-                        var yg = scaler.CenterY - hgs;
-
                         var x0b = scaler.CenterX - hgs;
                         var x1b = scaler.CenterX - hgs;
                         var x2b = scaler.CenterX - hgs;
@@ -265,8 +266,8 @@ namespace LiveChartsCore
                         var y1b = scaler.CenterY - hgs;
                         var y2b = scaler.CenterY - hgs;
 
-                        v.Geometry.X = xg;
-                        v.Geometry.Y = yg;
+                        v.Geometry.X = scaler.CenterX;
+                        v.Geometry.Y = scaler.CenterY;
                         v.Geometry.Width = gs;
                         v.Geometry.Height = gs;
 
@@ -324,7 +325,7 @@ namespace LiveChartsCore
 
                         if (data.IsLast)
                         {
-                            fillPathHelper.EndSegment.X = (float)data.X2;
+                            fillPathHelper.EndSegment.X = scaler.CenterX;
                             fillPathHelper.EndSegment.Y = scaler.CenterY;
                             fillPathHelper.Path.AddCommand(fillPathHelper.EndSegment);
 
@@ -337,8 +338,18 @@ namespace LiveChartsCore
                     {
                         if (data.IsFirst)
                         {
+                            if (wasStrokeInitialized)
+                            {
+                                strokePathHelper.StartPoint.X = scaler.CenterX;
+                                strokePathHelper.StartPoint.Y = scaler.CenterY;
+
+                                strokePathHelper.StartPoint.CompleteTransitions(
+                                   nameof(strokePathHelper.StartPoint.Y), nameof(strokePathHelper.StartPoint.X));
+                            }
+
                             strokePathHelper.StartPoint.X = (float)data.X0;
                             strokePathHelper.StartPoint.Y = (float)data.Y0;
+
                             strokePathHelper.Path.AddCommand(strokePathHelper.StartPoint);
                         }
 
@@ -441,15 +452,15 @@ namespace LiveChartsCore
         public virtual SeriesBounds GetBounds(
             PolarChart<TDrawingContext> chart, IPolarAxis angleAxis, IPolarAxis radiusAxis)
         {
-            var baseSeriesBounds = DataProvider is null
+            var baseSeriesBounds = DataFactory is null
                 ? throw new Exception("A data provider is required")
-                : DataProvider.GetCartesianBounds(chart, this, angleAxis, radiusAxis);
+                : DataFactory.GetCartesianBounds(chart, this, angleAxis, radiusAxis);
 
             if (baseSeriesBounds.HasData) return baseSeriesBounds;
             var baseBounds = baseSeriesBounds.Bounds;
 
-            var tickPrimary = radiusAxis.GetTick(chart.ControlSize, baseBounds.VisiblePrimaryBounds);
-            var tickSecondary = angleAxis.GetTick(chart.ControlSize, baseBounds.VisibleSecondaryBounds);
+            var tickPrimary = radiusAxis.GetTick(chart, baseBounds.VisiblePrimaryBounds);
+            var tickSecondary = angleAxis.GetTick(chart, baseBounds.VisibleSecondaryBounds);
 
             var ts = tickSecondary.Value * DataPadding.X;
             var tp = tickPrimary.Value * DataPadding.Y;
@@ -819,7 +830,7 @@ namespace LiveChartsCore
         {
             var visual = (LineBezierVisualPoint<TDrawingContext, TVisual, TBezierSegment, TPathArgs>?)point.Context.Visual;
             if (visual is null) return;
-            if (DataProvider is null) throw new Exception("Data provider not found");
+            if (DataFactory is null) throw new Exception("Data provider not found");
 
             var p = scaler.ToPixels(point);
             var x = p.X;
@@ -831,7 +842,7 @@ namespace LiveChartsCore
             visual.Geometry.Width = 0;
             visual.Geometry.RemoveOnCompleted = true;
 
-            DataProvider.DisposePoint(point);
+            DataFactory.DisposePoint(point);
 
             var label = (TLabel?)point.Context.Label;
             if (label is null) return;
@@ -845,7 +856,9 @@ namespace LiveChartsCore
         {
             var core = ((IPolarChartView<TDrawingContext>)chart).Core;
 
-            var scale = new PolarScaler(core.DrawMarginLocation, core.DrawMarginSize, core.AngleAxes[ScalesAngleAt], core.RadiusAxes[ScalesRadiusAt], 0);
+            var scale = new PolarScaler(
+                core.DrawMarginLocation, core.DrawMarginSize, core.AngleAxes[ScalesAngleAt], core.RadiusAxes[ScalesRadiusAt],
+                core.InnerRadius, core.InitialRotation, core.TotalAnge);
 
             var deleted = new List<ChartPoint>();
             foreach (var point in everFetched)
@@ -893,7 +906,7 @@ namespace LiveChartsCore
         /// <returns></returns>
         protected override IPaint<TDrawingContext>?[] GetPaintTasks()
         {
-            return new[] { Stroke, Fill, _geometryFill, _geometryStroke, DataLabelsPaint };
+            return new[] { Stroke, Fill, _geometryFill, _geometryStroke, DataLabelsPaint, hoverPaint };
         }
 
         private IEnumerable<ChartPoint[]> SplitEachNull(

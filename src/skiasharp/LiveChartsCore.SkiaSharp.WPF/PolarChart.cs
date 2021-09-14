@@ -61,8 +61,14 @@ namespace LiveChartsCore.SkiaSharpView.WPF
             _sectionsObserver = new CollectionDeepObserver<Section<SkiaSharpDrawingContext>>(
                 OnDeepCollectionChanged, OnDeepCollectionPropertyChanged, true);
 
-            SetCurrentValue(AngleAxesProperty, new ObservableCollection<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() });
-            SetCurrentValue(RadiusAxesProperty, new ObservableCollection<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() });
+            SetCurrentValue(AngleAxesProperty, new ObservableCollection<IPolarAxis>()
+            {
+                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+            });
+            SetCurrentValue(RadiusAxesProperty, new ObservableCollection<IPolarAxis>()
+            {
+                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+            });
             SetCurrentValue(SeriesProperty, new ObservableCollection<ISeries>());
 
             MouseWheel += OnMouseWheel;
@@ -73,7 +79,35 @@ namespace LiveChartsCore.SkiaSharpView.WPF
         #region dependency properties
 
         /// <summary>
-        /// The series property
+        /// The fit to bounds property.
+        /// </summary>
+        public static readonly DependencyProperty FitToBoundsProperty =
+            DependencyProperty.Register(nameof(FitToBounds), typeof(bool), typeof(PolarChart),
+                new PropertyMetadata(false, OnDependencyPropertyChanged));
+
+        /// <summary>
+        /// The total angle property.
+        /// </summary>
+        public static readonly DependencyProperty TotalAngleProperty =
+            DependencyProperty.Register(nameof(TotalAngle), typeof(double), typeof(PolarChart),
+                new PropertyMetadata(360d, OnDependencyPropertyChanged));
+
+        /// <summary>
+        /// The inner radius property.
+        /// </summary>
+        public static readonly DependencyProperty InnerRadiusProperty =
+            DependencyProperty.Register(nameof(InnerRadius), typeof(double), typeof(PolarChart),
+                new PropertyMetadata(0d, OnDependencyPropertyChanged));
+
+        /// <summary>
+        /// The initial rotation property.
+        /// </summary>
+        public static readonly DependencyProperty InitialRotationProperty =
+            DependencyProperty.Register(nameof(InitialRotation), typeof(double), typeof(PolarChart),
+                new PropertyMetadata(0d, OnDependencyPropertyChanged));
+
+        /// <summary>
+        /// The series property.
         /// </summary>
         public static readonly DependencyProperty SeriesProperty =
             DependencyProperty.Register(
@@ -93,7 +127,7 @@ namespace LiveChartsCore.SkiaSharpView.WPF
                     }));
 
         /// <summary>
-        /// The x axes property
+        /// The x axes property.
         /// </summary>
         public static readonly DependencyProperty AngleAxesProperty =
             DependencyProperty.Register(
@@ -109,7 +143,12 @@ namespace LiveChartsCore.SkiaSharpView.WPF
                     },
                     (DependencyObject o, object value) =>
                     {
-                        return value is IEnumerable<IPolarAxis> ? value : new List<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() };
+                        return value is IEnumerable<IPolarAxis>
+                            ? value
+                            : new List<IPolarAxis>()
+                            {
+                                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+                            };
                     }));
 
         /// <summary>
@@ -129,7 +168,12 @@ namespace LiveChartsCore.SkiaSharpView.WPF
                     },
                     (DependencyObject o, object value) =>
                     {
-                        return value is IEnumerable<IPolarAxis> ? value : new List<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() };
+                        return value is IEnumerable<IPolarAxis>
+                            ? value
+                            : new List<IPolarAxis>()
+                            {
+                                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+                            };
                     }));
 
         #endregion
@@ -138,6 +182,34 @@ namespace LiveChartsCore.SkiaSharpView.WPF
 
         PolarChart<SkiaSharpDrawingContext> IPolarChartView<SkiaSharpDrawingContext>.Core =>
             core is null ? throw new Exception("core not found") : (PolarChart<SkiaSharpDrawingContext>)core;
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.FitToBounds" />
+        public bool FitToBounds
+        {
+            get => (bool)GetValue(FitToBoundsProperty);
+            set => SetValue(FitToBoundsProperty, value);
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.TotalAngle" />
+        public double TotalAngle
+        {
+            get => (double)GetValue(TotalAngleProperty);
+            set => SetValue(TotalAngleProperty, value);
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.InnerRadius" />
+        public double InnerRadius
+        {
+            get => (double)GetValue(InnerRadiusProperty);
+            set => SetValue(InnerRadiusProperty, value);
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.InitialRotation" />
+        public double InitialRotation
+        {
+            get => (double)GetValue(InitialRotationProperty);
+            set => SetValue(InitialRotationProperty, value);
+        }
 
         /// <inheritdoc cref="IPolarChartView{TDrawingContext}.Series" />
         public IEnumerable<ISeries> Series

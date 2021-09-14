@@ -45,7 +45,6 @@ namespace LiveChartsCore
         internal readonly HashSet<Section<TDrawingContext>> _everMeasuredSections = new();
         private readonly IPolarChartView<TDrawingContext> _chartView;
         private int _nextSeries = 0;
-        private IEnumerable<ISeries>? _designerSeries = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PolarChart{TDrawingContext}"/> class.
@@ -62,21 +61,6 @@ namespace LiveChartsCore
             : base(canvas, defaultPlatformConfig, view, lockOnMeasure)
         {
             _chartView = view;
-
-            view.PointStates.Chart = this;
-            foreach (var item in view.PointStates.GetStates())
-            {
-                if (item.Fill is not null)
-                {
-                    item.Fill.ZIndex += 1000000;
-                    canvas.AddDrawableTask(item.Fill);
-                }
-                if (item.Stroke is not null)
-                {
-                    item.Stroke.ZIndex += 1000000;
-                    canvas.AddDrawableTask(item.Stroke);
-                }
-            }
         }
 
         /// <summary>
@@ -102,6 +86,35 @@ namespace LiveChartsCore
         /// The series.
         /// </value>
         public IPolarSeries<TDrawingContext>[] Series { get; private set; } = new IPolarSeries<TDrawingContext>[0];
+
+        /// <summary>
+        /// Gets whether the series fit to bounds or not.
+        /// </summary>
+        public bool FitToBounds { get; private set; }
+
+        /// <summary>
+        /// Gets the total circumference angle.
+        /// </summary>
+        /// <value>
+        /// The total angle.
+        /// </value>
+        public float TotalAnge { get; private set; }
+
+        /// <summary>
+        /// Gets the Inner radius.
+        /// </summary>
+        /// <value>
+        /// The inner radius.
+        /// </value>
+        public float InnerRadius { get; private set; }
+
+        /// <summary>
+        /// Gets the Initial rotation.
+        /// </summary>
+        /// /// <value>
+        /// The inner radius.
+        /// </value>
+        public float InitialRotation { get; private set; }
 
         /// <summary>
         /// Gets the drawable series.
@@ -182,9 +195,12 @@ namespace LiveChartsCore
             AnimationsSpeed = _chartView.AnimationsSpeed;
             EasingFunction = _chartView.EasingFunction;
 
-            var actualSeries = View.DesignerMode
-                ? _designerSeries ??= LiveCharts.CurrentSettings.DesignerSeriesGenerator(DesignerKind.Cartesian)
-                : _chartView.Series.Where(x => x.IsVisible);
+            FitToBounds = _chartView.FitToBounds;
+            TotalAnge = (float)_chartView.TotalAngle;
+            InnerRadius = (float)_chartView.InnerRadius;
+            InitialRotation = (float)_chartView.InitialRotation;
+
+            var actualSeries = (_chartView.Series ?? Enumerable.Empty<ISeries>()).Where(x => x.IsVisible);
 
             Series = actualSeries
                 .Cast<IPolarSeries<TDrawingContext>>()
@@ -318,10 +334,76 @@ namespace LiveChartsCore
             }
 
             // calculate draw margin
-            if (viewDrawMargin is null)
+
+            if (FitToBounds)
+            {
+                float mt = 0, mb = 0, ml = 0, mr = 0;
+
+                foreach (var series in Series)
+                {
+                    var scaler = new PolarScaler(
+                        DrawMarginLocation, DrawMarginSize, AngleAxes[series.ScalesAngleAt], RadiusAxes[series.ScalesRadiusAt],
+                        InnerRadius, InitialRotation, TotalAnge);
+
+                    foreach (var point in series.Fetch(this))
+                    {
+                        var p = scaler.ToPixels(point);
+
+                        var dx = p.X - scaler.CenterX;
+                        var dy = p.Y - scaler.CenterY;
+
+                        if (dx > 0)
+                        {
+                            if (dx > mr)
+                                mr = dx;
+                        }
+                        else
+                        {
+                            dx *= -1;
+                            if (dx > ml)
+                                ml = dx;
+                        }
+
+                        if (dy > 0)
+                        {
+                            if (dy > mb)
+                                mb = dy;
+                        }
+                        else
+                        {
+                            dy *= -1;
+                            if (dy > mt)
+                                mt = dy;
+                        }
+                    }
+                }
+
+                var cs = ControlSize;
+                var cx = cs.Width * 0.5f;
+                var cy = cs.Height * 0.5f;
+
+                var dl = cx - ml;
+                var dr = cx - mr;
+                var dt = cy - mt;
+                var db = cy - mb;
+
+                // so the idea is...
+
+                // we know the distance of the most left point to the left border (dl)
+                // the most right point to the right border (dr)
+                // the most bottom point to the bottom border (db)
+                // the most top point to the top border (dt)
+
+                // then to "easily" fit the plot to the data bounds, we create a negative margin for our draw margin
+                // then the scaler will luckily handle it.
+
+                var fitMargin = new Margin(-dl, -dt, -dr, -db);
+                SetDrawMargin(ControlSize, fitMargin);
+            }
+            else if (viewDrawMargin is null)
             {
                 var m = viewDrawMargin ?? new Margin();
-                //float ts = 0f, bs = 0f, ls = 0f, rs = 0f;
+                var r = 0f;
                 SetDrawMargin(ControlSize, m);
 
                 foreach (var axis in AngleAxes)
@@ -341,24 +423,14 @@ namespace LiveChartsCore
                     var ns = drawablePlane.GetNameLabelSize(this);
                     var s = drawablePlane.GetPossibleSize(this);
 
-                    //if (axis.Position == AxisPosition.Start)
-                    //{
-                    //    // X Bottom
-                    //    axis.Yo = m.Bottom + s.Height * 0.5f + ns.Height;
-                    //    bs += s.Height + ns.Height;
-                    //    m.Bottom = bs;
-                    //    if (s.Width * 0.5f > m.Left) m.Left = s.Width * 0.5f;
-                    //    if (s.Width * 0.5f > m.Right) m.Right = s.Width * 0.5f;
-                    //}
-                    //else
-                    //{
-                    //    // X Top
-                    //    axis.Yo = ts + s.Height * 0.5f + ns.Height;
-                    //    ts += s.Height + ns.Height;
-                    //    m.Top = ts;
-                    //    if (ls + s.Width * 0.5f > m.Left) m.Left = ls + s.Width * 0.5f;
-                    //    if (rs + s.Width * 0.5f > m.Right) m.Right = rs + s.Width * 0.5f;
-                    //}
+                    var radius = s.Height; // <- this type needs to be changed... it is not the height it is the radius.
+
+                    axis.Ro = m.Top + radius;
+
+                    m.Top += radius;
+                    m.Bottom += radius;
+                    m.Left += radius;
+                    m.Right += radius;
                 }
                 foreach (var axis in RadiusAxes)
                 {
@@ -373,28 +445,7 @@ namespace LiveChartsCore
                         axis.VisibleDataBounds.Max = axis.VisibleDataBounds.Max + c;
                     }
 
-                    var drawablePlane = (IPlane<TDrawingContext>)axis;
-                    var ns = drawablePlane.GetNameLabelSize(this);
-                    var s = drawablePlane.GetPossibleSize(this);
-                    var w = s.Width > m.Left ? s.Width : m.Left;
-                    //if (axis.Position == AxisPosition.Start)
-                    //{
-                    //    // Y Left
-                    //    axis.Xo = ls + w * 0.5f + ns.Width;
-                    //    ls += w + ns.Width;
-                    //    m.Left = ls;
-                    //    if (s.Height * 0.5f > m.Top) { m.Top = s.Height * 0.5f; }
-                    //    if (s.Height * 0.5f > m.Bottom) { m.Bottom = s.Height * 0.5f; }
-                    //}
-                    //else
-                    //{
-                    //    // Y Right
-                    //    axis.Xo = rs + w * 0.5f + ns.Width;
-                    //    rs += w + ns.Width;
-                    //    m.Right = rs;
-                    //    if (ts + s.Height * 0.5f > m.Top) m.Top = ts + s.Height * 0.5f;
-                    //    if (bs + s.Height * 0.5f > m.Bottom) m.Bottom = bs + s.Height * 0.5f;
-                    //}
+                    // the angle axis does not require padding?? I think it does not
                 }
 
                 SetDrawMargin(ControlSize, m);
@@ -415,31 +466,37 @@ namespace LiveChartsCore
                     axis.DataBounds.Max = axis.DataBounds.Max + c;
                 }
 
-                //// apply padding
-                //if (axis.MinLimit is null)
-                //{
-                //    var s = new Scaler(DrawMarginLocation, DrawMarginSize, axis);
-                //    // correction by geometry size
-                //    var p = Math.Abs(s.ToChartValues(axis.DataBounds.RequestedGeometrySize) - s.ToChartValues(0));
-                //    if (axis.DataBounds.PaddingMin > p) p = axis.DataBounds.PaddingMin;
-                //    axis.IsNotifyingChanges = false;
-                //    axis.DataBounds.Min = axis.DataBounds.Min - p;
-                //    axis.VisibleDataBounds.Min = axis.VisibleDataBounds.Min - p;
-                //    axis.IsNotifyingChanges = true;
-                //}
+                if (axis.Orientation == PolarAxisOrientation.Radius)
+                {
+                    // only the radial axes have a padding.
+                    // angle axes are ignored.
 
-                //// apply padding
-                //if (axis.MaxLimit is null)
-                //{
-                //    var s = new Scaler(DrawMarginLocation, DrawMarginSize, axis);
-                //    // correction by geometry size
-                //    var p = Math.Abs(s.ToChartValues(axis.DataBounds.RequestedGeometrySize) - s.ToChartValues(0));
-                //    if (axis.DataBounds.PaddingMax > p) p = axis.DataBounds.PaddingMax;
-                //    axis.IsNotifyingChanges = false;
-                //    axis.DataBounds.Max = axis.DataBounds.Max + p;
-                //    axis.VisibleDataBounds.Max = axis.VisibleDataBounds.Max + p;
-                //    axis.IsNotifyingChanges = true;
-                //}
+                    // apply padding
+                    if (axis.MinLimit is null)
+                    {
+                        var s = 0d;//new Scaler(DrawMarginLocation, DrawMarginSize, axis);
+                        // correction by geometry size
+                        var p = 0d;//Math.Abs(s.ToChartValues(axis.DataBounds.RequestedGeometrySize) - s.ToChartValues(0));
+                        if (axis.DataBounds.PaddingMin > p) p = axis.DataBounds.PaddingMin;
+                        axis.IsNotifyingChanges = false;
+                        axis.DataBounds.Min = axis.DataBounds.Min - p;
+                        axis.VisibleDataBounds.Min = axis.VisibleDataBounds.Min - p;
+                        axis.IsNotifyingChanges = true;
+                    }
+
+                    // apply padding
+                    if (axis.MaxLimit is null)
+                    {
+                        var s = 0d; //new Scaler(DrawMarginLocation, DrawMarginSize, axis);
+                        // correction by geometry size
+                        var p = 0d; // Math.Abs(s.ToChartValues(axis.DataBounds.RequestedGeometrySize) - s.ToChartValues(0));
+                        if (axis.DataBounds.PaddingMax > p) p = axis.DataBounds.PaddingMax;
+                        axis.IsNotifyingChanges = false;
+                        axis.DataBounds.Max = axis.DataBounds.Max + p;
+                        axis.VisibleDataBounds.Max = axis.VisibleDataBounds.Max + p;
+                        axis.IsNotifyingChanges = true;
+                    }
+                }
 
                 var drawablePlane = (IPlane<TDrawingContext>)axis;
                 _ = _everMeasuredAxes.Add(drawablePlane);

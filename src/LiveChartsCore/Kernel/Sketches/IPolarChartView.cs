@@ -42,18 +42,48 @@ namespace LiveChartsCore.Kernel.Sketches
         PolarChart<TDrawingContext> Core { get; }
 
         /// <summary>
-        /// Gets or sets the x axes.
+        /// Gets whether the chart scales to try to fit the plot to the series bounds, it calculates a new center of the radial chart,
+        /// default is false.
+        /// </summary>
+        bool FitToBounds { get; set; }
+
+        /// <summary>
+        /// Gets or sets the total circumference angle in degrees, default is 360.
         /// </summary>
         /// <value>
-        /// The x axes.
+        /// The inner radius.
+        /// </value>
+        double TotalAngle { get; set; }
+
+        /// <summary>
+        /// Gets or sets the inner radius, default is 0.
+        /// </summary>
+        /// <value>
+        /// The inner radius.
+        /// </value>
+        double InnerRadius { get; set; }
+
+        /// <summary>
+        /// Gets or sets the initial rotation, default is 0.
+        /// </summary>
+        /// <value>
+        /// The inner radius.
+        /// </value>
+        double InitialRotation { get; set; }
+
+        /// <summary>
+        /// Gets or sets the angle axes.
+        /// </summary>
+        /// <value>
+        /// The angle axes.
         /// </value>
         IEnumerable<IPolarAxis> AngleAxes { get; set; }
 
         /// <summary>
-        /// Gets or sets the y axes.
+        /// Gets or sets the radius axes.
         /// </summary>
         /// <value>
-        /// The y axes.
+        /// The radius axes.
         /// </value>
         IEnumerable<IPolarAxis> RadiusAxes { get; set; }
 

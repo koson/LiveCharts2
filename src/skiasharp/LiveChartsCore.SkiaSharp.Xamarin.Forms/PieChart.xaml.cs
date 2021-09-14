@@ -590,6 +590,7 @@ namespace LiveChartsCore.SkiaSharpView.Xamarin.Forms
         {
             if (tooltip is null || _core is null) return;
 
+            core.ClearTooltipData();
             ((IChartTooltip<SkiaSharpDrawingContext>)tooltip).Hide();
         }
 

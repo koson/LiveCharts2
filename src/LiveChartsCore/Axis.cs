@@ -234,17 +234,17 @@ namespace LiveChartsCore
 
             if (NamePaint is not null)
             {
-                NamePaint.ZIndex = -1;
+                if (NamePaint.ZIndex == 0) NamePaint.ZIndex = -1;
                 cartesianChart.Canvas.AddDrawableTask(NamePaint);
             }
             if (LabelsPaint is not null)
             {
-                LabelsPaint.ZIndex = -1;
+                if (LabelsPaint.ZIndex == 0) LabelsPaint.ZIndex = -0.9;
                 cartesianChart.Canvas.AddDrawableTask(LabelsPaint);
             }
             if (SeparatorsPaint is not null)
             {
-                SeparatorsPaint.ZIndex = -1;
+                if (SeparatorsPaint.ZIndex == 0) SeparatorsPaint.ZIndex = -1;
                 SeparatorsPaint.SetClipRectangle(cartesianChart.Canvas, new LvcRectangle(drawLocation, drawMarginSize));
                 cartesianChart.Canvas.AddDrawableTask(SeparatorsPaint);
             }
@@ -433,10 +433,10 @@ namespace LiveChartsCore
 
                 if (NamePaint is not null && _nameGeometry is not null)
                     NamePaint.AddGeometryToPaintTask(cartesianChart.Canvas, _nameGeometry);
-                if (LabelsPaint is not null && visualSeparator.Text is not null)
-                    LabelsPaint.AddGeometryToPaintTask(cartesianChart.Canvas, visualSeparator.Text);
                 if (SeparatorsPaint is not null && ShowSeparatorLines && visualSeparator.Line is not null)
                     SeparatorsPaint.AddGeometryToPaintTask(cartesianChart.Canvas, visualSeparator.Line);
+                if (LabelsPaint is not null && visualSeparator.Text is not null)
+                    LabelsPaint.AddGeometryToPaintTask(cartesianChart.Canvas, visualSeparator.Text);
 
                 if (visualSeparator.Text is not null)
                 {

@@ -36,6 +36,10 @@ namespace LiveChartsCore.SkiaSharpView.WinForms
     /// <inheritdoc cref="IPolarChartView{TDrawingContext}" />
     public class PolarChart : Chart, IPolarChartView<SkiaSharpDrawingContext>
     {
+        private bool _fitToBounds = false;
+        private double _totalAngle = 360;
+        private double _innerRadius;
+        private double _initialRotation;
         private readonly CollectionDeepObserver<ISeries> _seriesObserver;
         private readonly CollectionDeepObserver<IPolarAxis> _angleObserver;
         private readonly CollectionDeepObserver<IPolarAxis> _radiusObserver;
@@ -60,8 +64,14 @@ namespace LiveChartsCore.SkiaSharpView.WinForms
             _angleObserver = new CollectionDeepObserver<IPolarAxis>(OnDeepCollectionChanged, OnDeepCollectionPropertyChanged, true);
             _radiusObserver = new CollectionDeepObserver<IPolarAxis>(OnDeepCollectionChanged, OnDeepCollectionPropertyChanged, true);
 
-            AngleAxes = new List<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() };
-            RadiusAxes = new List<IPolarAxis>() { LiveCharts.CurrentSettings.PolarAxisProvider() };
+            AngleAxes = new List<IPolarAxis>()
+            {
+                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+            };
+            RadiusAxes = new List<IPolarAxis>()
+            {
+                LiveCharts.CurrentSettings.GetProvider<SkiaSharpDrawingContext>().GetDefaultPolarAxis()
+            };
             Series = new ObservableCollection<ISeries>();
 
             var c = Controls[0].Controls[0];
@@ -73,8 +83,55 @@ namespace LiveChartsCore.SkiaSharpView.WinForms
 
         PolarChart<SkiaSharpDrawingContext> IPolarChartView<SkiaSharpDrawingContext>.Core => core is null ? throw new Exception("core not found") : (PolarChart<SkiaSharpDrawingContext>)core;
 
-        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.Series" />
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.FitToBounds" />
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool FitToBounds
+        {
+            get => _fitToBounds;
+            set
+            {
+                _fitToBounds = value;
+                OnPropertyChanged();
+            }
+        }
 
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.TotalAngle" />
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public double TotalAngle
+        {
+            get => _totalAngle;
+            set
+            {
+                _totalAngle = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.InnerRadius" />
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public double InnerRadius
+        {
+            get => _innerRadius;
+            set
+            {
+                _innerRadius = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.InitialRotation" />
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public double InitialRotation
+        {
+            get => _initialRotation;
+            set
+            {
+                _initialRotation = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <inheritdoc cref="IPolarChartView{TDrawingContext}.Series" />
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public IEnumerable<ISeries> Series
         {
